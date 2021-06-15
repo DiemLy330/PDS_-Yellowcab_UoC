@@ -1,5 +1,4 @@
 import click
-from . import model
 
 
 @click.command()
@@ -13,6 +12,8 @@ def main(transform, i, o, predict):
             print("Insufficient file specification, use -i for input path and -o for output path")
         else:
             print("Transforming data ...")
+            print('i = ', i)
+            print('o = ', o)
     elif predict:
         print("Predicting stuff...")
 
