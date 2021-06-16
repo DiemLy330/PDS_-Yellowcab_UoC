@@ -147,7 +147,7 @@ def pre_process_queens(full_queens):
     dfpdname = dfpd.rename(columns={0: 'pd'})
     Xfull = pd.concat((raw, dfname, dfpdname), axis=1)
     Xfull.drop(['PUlon', 'PUlat', 'DOlon', 'DOlat', 'PUlonra', 'PUlatra', 'DOlonra', 'DOlatra', 'PULocationID',
-                'DOLocationID','pay5'], axis=1, inplace=True)
+                'DOLocationID'], axis=1, inplace=True)
 
     # rs = RobustScaler()
     # rs.fit(Xfull)

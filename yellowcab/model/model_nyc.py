@@ -13,7 +13,8 @@ from sklearn.compose import TransformedTargetRegressor
 
 class model_nyc:
     def __init__(self):
-        self.Xscaled = transform_nyc()
+        self.X = transform_nyc()
+        self.Xscaled = pre_process_nyc(self.X)
 
     def transform(X):
         return transform_nyc(X)
@@ -30,12 +31,15 @@ class model_nyc:
              'DOweekend', 'DOhoursin', 'DOhourcos', 'DOdaysin', 'DOdaycos', 'DOmonthsin', 'DOmonthcos'], axis=1)
         Xtrain, Xtest, ytrain, ytest = train_test_split(Xa, ya, test_size=0.2, random_state=0)
 
+        ytraindf = np.array(ytrain).reshape(len(ytrain), 1)
+        ytestdf = np.array(ytest).reshape(len(ytest), 1)
+
         transformer_x = RobustScaler().fit(Xtrain)
-        transformer_y = RobustScaler().fit(ytrain)
+        transformer_y = RobustScaler().fit(ytraindf)
         X_train = pd.DataFrame(transformer_x.transform(Xtrain), index=Xtrain.index, columns=Xtrain.columns)
-        y_train = transformer_y.transform(ytrain)
+        y_train = transformer_y.transform(ytraindf)
         X_test = pd.DataFrame(transformer_x.transform(Xtest), index=Xtest.index, columns=Xtest.columns)
-        y_test = transformer_y.transform(ytest)
+        y_test = transformer_y.transform(ytestdf)
 
         # Find the best hyperparameter
         # neg_root_mean_squared_error = sm.make_scorer(sm.mean_squared_error, greater_is_better=False, squared=False)
@@ -50,22 +54,23 @@ class model_nyc:
         modela = SGDRegressor(alpha=0, random_state=0)
         model = modela.fit(X_train,y_train)
         filename = 'predict_distance_nyc.pkl'
-        # io.save_model(model, filename)
 
         # Predict X
-        Xprocessed = pre_process_nyc(X)
-        Xdropped = Xprocessed.drop(
-            ['trip_distance', 'pd', 'duration', 'passenger_count', 'payment_type', 'pay2', 'pay3', 'pay4', 'r2',
-             'r3', 'r4', 'r5', 'r6',
-             'fare_amount', 'extra', 'mta_tax', 'tip_amount', 'tolls_amount',
-             'improvement_surcharge', 'total_amount', 'congestion_surcharge',
-             'DOweekend', 'DOhoursin', 'DOhourcos', 'DOdaysin', 'DOdaycos', 'DOmonthsin', 'DOmonthcos'], axis=1)
-        Xnew = pd.DataFrame(transformer_x.transform(Xdropped), index=Xtrain.index, columns=Xtrain.columns)
         if X == None:
             res = model.predict(X_test)
         else:
+            Xtransformed = transform_nyc(X)
+            Xprocessed = pre_process_nyc(Xtransformed)
+            Xdropped = Xprocessed.drop(
+                ['trip_distance', 'pd', 'duration', 'passenger_count', 'payment_type', 'pay2', 'pay3', 'pay4', 'r2',
+                 'r3', 'r4', 'r5', 'r6',
+                 'fare_amount', 'extra', 'mta_tax', 'tip_amount', 'tolls_amount',
+                 'improvement_surcharge', 'total_amount', 'congestion_surcharge',
+                 'DOweekend', 'DOhoursin', 'DOhourcos', 'DOdaysin', 'DOdaycos', 'DOmonthsin', 'DOmonthcos'], axis=1)
+            Xnew = pd.DataFrame(transformer_x.transform(Xdropped), index=Xdropped.index, columns=Xdropped.columns)
             res = model.predict(Xnew)
-        predicted_distance = transformer_y.inverse_transform(np.reshape(res, (res.shape[0], 1)))
+        predicted_distance = transformer_y.inverse_transform(np.reshape(res, (res.shape[0], 1))).flatten()
+        io.save_model(predicted_distance, filename)
         return predicted_distance
 
     def predict_fare_nyc(self,X=None):
@@ -79,12 +84,15 @@ class model_nyc:
                            ], axis=1)
         Xtrain, Xtest, ytrain, ytest = train_test_split(Xb, yb, test_size=0.2, random_state=0)
 
+        ytrainarr = np.array(ytrain).reshape(len(ytrain), 1)
+        ytestarr = np.array(ytest).reshape(len(ytest), 1)
+
         transformer_x = RobustScaler().fit(Xtrain)
         transformer_y = RobustScaler().fit(ytrain)
         X_train = pd.DataFrame(transformer_x.transform(Xtrain), index=Xtrain.index, columns=Xtrain.columns)
-        y_train = transformer_y.transform(ytrain)
+        y_train = transformer_y.transform(ytrainarr)
         X_test = pd.DataFrame(transformer_x.transform(Xtest), index=Xtest.index, columns=Xtest.columns)
-        y_test = transformer_y.transform(ytest)
+        y_test = transformer_y.transform(ytestarr)
 
         # Find the best hyperparameter
         # neg_root_mean_squared_error = sm.make_scorer(sm.mean_squared_error, greater_is_better=False, squared=False)
@@ -116,22 +124,22 @@ class model_nyc:
         col_train = pd.DataFrame(X_train.pd, index=X_train.index, columns=['pd'])
         finalmodelb.fit(col_train, y_train)
         filename = 'predict_fare_nyc.pkl'
-        res = finalmodelb.predict(col)
 
         # Predict X
-        Xprocessed = pre_process_nyc(X)
-        Xdropped =  Xprocessed.drop(['fare_amount', 'payment_type',
-                           'extra',
-                           'mta_tax', 'tip_amount',
-                           'tolls_amount', 'improvement_surcharge',
-                           'total_amount', 'congestion_surcharge', 'trip_distance', 'duration'
-                           ], axis=1)
-        Xnew = pd.DataFrame(transformer_x.transform(Xdropped), index=Xtrain.index, columns=Xtrain.columns)
         if X == None:
-            res = finalmodelb.predict(X_test)
+            res = finalmodelb.predict(col)
         else:
+            Xtransformed = transform_nyc(X)
+            Xprocessed = pre_process_nyc(Xtransformed)
+            Xdropped = Xprocessed.drop(['fare_amount', 'payment_type',
+                                        'extra',
+                                        'mta_tax', 'tip_amount',
+                                        'tolls_amount', 'improvement_surcharge',
+                                        'total_amount', 'congestion_surcharge', 'trip_distance', 'duration'
+                                        ], axis=1)
+            Xnew = pd.DataFrame(transformer_x.transform(Xdropped), index=Xdropped.index, columns=Xdropped.columns)
             res = finalmodelb.predict(Xnew)
-        predicted_fare = transformer_y.inverse_transform(np.reshape(res, (res.shape[0], 1)))
+        predicted_fare = transformer_y.inverse_transform(np.reshape(res, (res.shape[0], 1))).flatten()
         return predicted_fare
         # io.save_model(finalmodelb,filename)
 
@@ -141,12 +149,15 @@ class model_nyc:
         Xc = Xscaled.drop(['payment_type', 'pay2', 'pay3', 'pay4'], axis=1)
         Xtrain, Xtest, ytrain, ytest = train_test_split(Xc, yc, test_size=0.2, random_state=0)
 
+        ytrainarr = np.array(ytrain).reshape(len(ytrain), 1)
+        ytestarr = np.array(ytest).reshape(len(ytest), 1)
+
         transformer_x = RobustScaler().fit(Xtrain)
         transformer_y = RobustScaler().fit(ytrain)
         X_train = pd.DataFrame(transformer_x.transform(Xtrain), index=Xtrain.index, columns=Xtrain.columns)
-        y_train = transformer_y.transform(ytrain)
+        y_train = transformer_y.transform(ytrainarr)
         X_test = pd.DataFrame(transformer_x.transform(Xtest), index=Xtest.index, columns=Xtest.columns)
-        y_test = transformer_y.transform(ytest)
+        y_test = transformer_y.transform(ytestarr)
 
         modelclog = SGDClassifier(loss='log', random_state=0)
         scoreclog = cross_val_score(modelclog, X_train, y_train, cv=5)
@@ -159,29 +170,33 @@ class model_nyc:
         filename='predict_payment_type_nyc.pkl'
 
         # Predict X
-        Xprocessed = pre_process_nyc(X)
-        Xdropped = Xprocessed.drop(['payment_type', 'pay2', 'pay3', 'pay4'], axis=1)
-        Xnew = pd.DataFrame(transformer_x.transform(Xdropped), index=Xtrain.index, columns=Xtrain.columns)
         if X == None:
             res = model.predict(X_test)
         else:
+            Xtransformed = transform_nyc(X)
+            Xprocessed = pre_process_nyc(Xtransformed)
+            Xdropped = Xprocessed.drop(['payment_type', 'pay2', 'pay3', 'pay4'], axis=1)
+            Xnew = pd.DataFrame(transformer_x.transform(Xdropped), index=Xdropped.index, columns=Xdropped.columns)
             res = model.predict(Xnew)
-        predicted_ptype = transformer_y.inverse_transform(np.reshape(res, (res.shape[0], 1)))
+        predicted_ptype = transformer_y.inverse_transform(np.reshape(res, (res.shape[0], 1))).flattern()
+        io.save_model(predicted_ptype, filename)
         return predicted_ptype
-        # io.save_model(model, filename)
+
 
     def predict(self,X=None):
         if X == None:
             distance = self.predict_distance_nyc()
-            fare = self.predict_fare_nyc().predict()
-            type = self.predict_payment_type_nyc().predict()
+            fare = self.predict_fare_nyc()
+            type = self.predict_payment_type_nyc()
         else:
             distance = self.predict_distance_nyc(X)
-            fare = self.predict_fare_nyc().predict(X)
-            type = self.predict_payment_type_nyc().predict(X)
+            fare = self.predict_fare_nyc(X)
+            type = self.predict_payment_type_nyc(X)
         df = pd.DataFrame(list(zip(distance,fare,type)),columns=['predicted_distance','predicted_fare','predicted_payment_type'])
+        filename= 'predict_nyc.pkl'
+        # io.save_model(df,filename)
         return df
-        # io.save_model(predict)
+
 
         # def train():
     #     lin = LinearRegression()

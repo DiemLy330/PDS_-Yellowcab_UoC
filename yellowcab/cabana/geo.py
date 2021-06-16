@@ -6,8 +6,8 @@ from descartes import PolygonPatch
 import geopandas as gpd
 import matplotlib.pyplot as plt
 from pyproj import Proj, transform
-# from .trips_input import *
-
+from yellowcab.io import utils
+import os
 #-------------------------------------------------------------------------------
 # Module using geo data to return information
     # get_centroid() returns a dictionary of location ID as keys and central points as values
@@ -19,7 +19,7 @@ class geo:
     # Get geo data of a specific location
     def __init__(self):
         # By geopandas
-        self.f = gpd.read_file(r'C:\Users\kyral\Documents\GitHub\PDS_Yellowcab_UoC\data\input\taxi_zones.geojson')
+        self.f = gpd.read_file(os.path.join(utils.get_data_path(),'input','taxi_zones.geojson'))
         self.l = self.f['OBJECTID'].values
         self.id = self.f['OBJECTID'].unique()
         self.b = self.f['borough'].unique()

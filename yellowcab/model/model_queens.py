@@ -1,4 +1,4 @@
-from .. import io
+from ..import io
 import os
 from yellowcab.cabana import *
 import numpy as np
@@ -14,7 +14,8 @@ from sklearn.metrics import SCORERS
 
 class model_queens:
     def __init__(self,X=None):
-        self.Xscaled = transform_queens()
+        self.X = transform_queens()
+        self.Xscaled = pre_process_queens(self.X)
 
     def transform(self,X):
         return transform_queens(X)
@@ -30,41 +31,46 @@ class model_queens:
              'DOweekend', 'DOhoursin', 'DOhourcos', 'DOdaysin', 'DOdaycos', 'DOmonthsin', 'DOmonthcos'], axis=1)
         Xtrain, Xtest, ytrain, ytest = train_test_split(Xa, ya, test_size=0.2, random_state=0)
 
+        ytrainarr = np.array(ytrain).reshape(len(ytrain),1)
+        ytestarr = np.array(ytest).reshape(len(ytest), 1)
+
         transformer_x = RobustScaler().fit(Xtrain)
-        transformer_y = RobustScaler().fit(ytrain)
+        transformer_y = RobustScaler().fit(ytrainarr)
         X_train = pd.DataFrame(transformer_x.transform(Xtrain), index=Xtrain.index, columns=Xtrain.columns)
-        y_train = transformer_y.transform(ytrain)
+        y_train = transformer_y.transform(ytrainarr)
         X_test = pd.DataFrame(transformer_x.transform(Xtest), index=Xtest.index, columns=Xtest.columns)
-        y_test = transformer_y.transform(ytest)
+        y_test = transformer_y.transform(ytestarr)
 
         modelhya = SGDRegressor(random_state=0)
         hyperparameters = {'loss': ['squared_loss', 'huber', 'epsilon_insensitive'], 'alpha': np.linspace(0, 0.001, 3)}
-        grid = GridSearchCV(modelhya, hyperparameters, cv=5, scoring='neg_root_mean_squared_error', n_jobs=-1)
-        # grid = GridSearchCV(modelhya, hyperparameters, cv=5, scoring='neg_mean_absolute_error', n_jobs=-1)
+        # grid = GridSearchCV(modelhya, hyperparameters, cv=5, scoring='neg_root_mean_squared_error', n_jobs=-1)
+        grid = GridSearchCV(modelhya, hyperparameters, cv=5, scoring='neg_mean_absolute_error', n_jobs=-1)
         grid.fit(Xtrain, ytrain)
         comparison = pd.DataFrame(np.abs(grid.cv_results_['mean_test_score']), columns=['Loss'],
                                   index=['squared0', 'huber0', 'ep0', 'squared0.0005', 'huber0.0005', 'ep.0005',
                                          'squared0.001', 'huber0.001', 'ep0.001'])
         modela = SGDRegressor(alpha=0, random_state=0)
         model = modela.fit(X_train, y_train)
-        filename = 'predict_distance_queens.pkl'
-        # io.save_model(model, filename)
 
         # Predict X
-        Xprocessed = pre_process_queens(X)
-        Xdropped = Xprocessed.drop(
+        if X == None:
+            res = model.predict(X_test)
+        else:
+            Xtransformed = transform_queens(X)
+            Xprocessed = pre_process_queens(Xtransformed)
+            Xdropped = Xprocessed.drop(
             ['trip_distance', 'pd', 'duration', 'passenger_count', 'payment_type', 'pay2', 'pay3', 'pay4', 'r2',
              'r3', 'r4', 'r5', 'r6',
              'fare_amount', 'extra', 'mta_tax', 'tip_amount', 'tolls_amount',
              'improvement_surcharge', 'total_amount', 'congestion_surcharge',
              'DOweekend', 'DOhoursin', 'DOhourcos', 'DOdaysin', 'DOdaycos', 'DOmonthsin', 'DOmonthcos'], axis=1)
-        Xnew = pd.DataFrame(transformer_x.transform(Xdropped), index=Xtrain.index, columns=Xtrain.columns)
-        if X == None:
-            res = model.predict(X_test)
-        else:
+            Xnew = pd.DataFrame(transformer_x.transform(Xdropped), index=Xdropped.index, columns=Xdropped.columns)
             res = model.predict(Xnew)
-        predicted_distance = transformer_y.inverse_transform(np.reshape(res, (res.shape[0], 1)))
+        predicted_distance = transformer_y.inverse_transform(np.reshape(res, (res.shape[0], 1))).flatten()
+        filename = 'predict_distance_queens.pkl'
+        io.save_model(model, filename)
         return predicted_distance
+
 
     def predict_fare_queens(self,X=None):
         Xscaled = self.Xscaled
@@ -77,18 +83,21 @@ class model_queens:
                            ], axis=1)
         Xtrain, Xtest, ytrain, ytest = train_test_split(Xb, yb, test_size=0.2, random_state=0)
 
+        ytraindf = np.array(ytrain).reshape(len(ytrain), 1)
+        ytestdf = np.array(ytest).reshape(len(ytest), 1)
+
         transformer_x = RobustScaler().fit(Xtrain)
-        transformer_y = RobustScaler().fit(ytrain)
+        transformer_y = RobustScaler().fit(ytraindf)
         X_train = pd.DataFrame(transformer_x.transform(Xtrain), index=Xtrain.index, columns=Xtrain.columns)
-        y_train = transformer_y.transform(ytrain)
+        y_train = transformer_y.transform(ytraindf)
         X_test = pd.DataFrame(transformer_x.transform(Xtest), index=Xtest.index, columns=Xtest.columns)
-        y_test = transformer_y.transform(ytest)
+        y_test = transformer_y.transform(ytestdf)
 
         # Find the best hyperparameter
         modelhyb = SGDRegressor(random_state=0)
         hyperparameters = {'loss': ['squared_loss', 'huber'], 'alpha': [0, 0.0001]}
-        grid = GridSearchCV(modelhyb, hyperparameters, cv=5, scoring='neg_root_mean_squared_error', n_jobs=-1)
-        # grid = GridSearchCV(modelhyb, hyperparameters, cv=5, scoring='neg_mean_absolute_error', n_jobs=-1)
+        # grid = GridSearchCV(modelhyb, hyperparameters, cv=5, scoring='neg_root_mean_squared_error', n_jobs=-1)
+        grid = GridSearchCV(modelhyb, hyperparameters, cv=5, scoring='neg_mean_absolute_error', n_jobs=-1)
         grid.fit(X_train, y_train)
         comparison = pd.DataFrame(np.abs(grid.cv_results_['mean_test_score']), columns=['Loss'],
                                   index=['squared0', 'huber0', 'squared0.0001', 'huber0.0001'])
@@ -113,24 +122,25 @@ class model_queens:
         col_train = pd.DataFrame(X_train.pd, index=X_train.index, columns=['pd'])
         finalmodelb.fit(col_train, y_train)
         filename = 'predict_fare_queens.pkl'
-        res = finalmodelb.predict(col)
 
         # Predict X
-        Xprocessed = pre_process_queens(X)
-        Xdropped = Xprocessed.drop(['fare_amount', 'payment_type',
+        if X == None:
+            res = finalmodelb.predict(col)
+        else:
+            Xtransformed = transform_queens(X)
+            Xprocessed = pre_process_queens(Xtransformed)
+            Xdropped = Xprocessed.drop(['fare_amount', 'payment_type',
                                     'extra',
                                     'mta_tax', 'tip_amount',
                                     'tolls_amount', 'improvement_surcharge',
                                     'total_amount', 'congestion_surcharge', 'trip_distance', 'duration'
                                     ], axis=1)
-        Xnew = pd.DataFrame(transformer_x.transform(Xdropped), index=Xtrain.index, columns=Xtrain.columns)
-        if X == None:
-            res = finalmodelb.predict(X_test)
-        else:
+            Xnew = pd.DataFrame(transformer_x.transform(Xdropped), index=Xdropped.index, columns=Xdropped.columns)
             res = finalmodelb.predict(Xnew)
-        predicted_fare = transformer_y.inverse_transform(np.reshape(res,(res.shape[0],1)))
+        predicted_fare = transformer_y.inverse_transform(np.reshape(res,(res.shape[0],1))).flatten()
+        io.save_model(finalmodelb, filename)
         return predicted_fare
-        # io.save_model(finalmodelb,filename)
+
 
     def predict_payment_type_queens(self, X=None):
         Xscaled = self.Xscaled
@@ -138,12 +148,15 @@ class model_queens:
         Xc = Xscaled.drop(['payment_type', 'pay2', 'pay3', 'pay4'], axis=1)
         Xtrain, Xtest, ytrain, ytest = train_test_split(Xc, yc, test_size=0.2, random_state=0)
 
+        ytraindf = np.array(ytrain).reshape(len(ytrain), 1)
+        ytestdf = np.array(ytest).reshape(len(ytest), 1)
+
         transformer_x = RobustScaler().fit(Xtrain)
-        transformer_y = RobustScaler().fit(ytrain)
+        transformer_y = RobustScaler().fit(ytraindf)
         X_train = pd.DataFrame(transformer_x.transform(Xtrain), index=Xtrain.index, columns=Xtrain.columns)
-        y_train = transformer_y.transform(ytrain)
+        y_train = transformer_y.transform(ytraindf)
         X_test = pd.DataFrame(transformer_x.transform(Xtest), index=Xtest.index, columns=Xtest.columns)
-        y_test = transformer_y.transform(ytest)
+        y_test = transformer_y.transform(ytestdf)
 
         modelclog = SGDClassifier(loss='log', random_state=0)
         scoreclog = cross_val_score(modelclog, X_train, y_train, cv=5)
@@ -156,14 +169,31 @@ class model_queens:
         filename = 'predict_payment_type_queens.pkl'
 
         # Predict X
-        Xprocessed = pre_process_queens(X)
-        Xdropped = Xprocessed.drop(['payment_type', 'pay2', 'pay3', 'pay4'], axis=1)
-        Xnew = pd.DataFrame(transformer_x.transform(Xdropped), index=Xtrain.index, columns=Xtrain.columns)
         if X == None:
             res = model.predict(X_test)
         else:
+            Xtransformed = transform_queens(X)
+            Xprocessed = pre_process_queens(Xtransformed)
+            Xdropped = Xprocessed.drop(['payment_type', 'pay2', 'pay3', 'pay4'], axis=1)
+            Xnew = pd.DataFrame(transformer_x.transform(Xdropped), index=Xdropped.index, columns=Xdropped.columns)
             res = model.predict(Xnew)
-        predicted_ptype = transformer_y.inverse_transform(np.reshape(res, (res.shape[0], 1)))
+        predicted_ptype = transformer_y.inverse_transform(np.reshape(res, (res.shape[0], 1))).flatten()
+        io.save_model(model, filename)
         return predicted_ptype
-        # io.save_model(model, filename)
+
+
+    def predict(self,X=None):
+        if X == None:
+            distance = self.predict_distance_queens()
+            fare = self.predict_fare_queens()
+            type = self.predict_payment_type_queens()
+        else:
+            distance = self.predict_distance_queens(X)
+            fare = self.predict_fare_queens(X)
+            type = self.predict_payment_type_queens(X)
+        df = pd.DataFrame(list(zip(distance,fare,type)),columns=['predicted_distance','predicted_fare','predicted_payment_type'])
+        filename= 'predict_queens.pkl'
+        io.save_model(df,filename)
+        return df
+
 

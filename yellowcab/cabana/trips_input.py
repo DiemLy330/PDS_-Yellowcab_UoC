@@ -4,6 +4,7 @@ from sys import getsizeof
 from .trips_info import *
 import os
 
+
 # Module gets data trips and  additional information include:
     # get_borough_locationID(borough) returns a list of all location ID in that borough, default "borough = 'Queens'"
     # get_trips() returns a given fraction data of random trips data, default: fraction=0.05, optimize = True
@@ -37,7 +38,7 @@ class trips_input:
         f = '01 02 03 04 05 06 07 08 09 10 11 12'.split( )
         result = []
         for i in f:
-            raw = pd.read_parquet(os.path.join(self.get_data_path(),'..','trip_data', f"{i}.parquet"), engine='pyarrow')
+            raw = pd.read_parquet(os.path.join(self.get_data_path(),'input', f"{i}.parquet"), engine='pyarrow')
             df = raw.sample(frac=fraction,random_state=0)
             result.append(df)
         d = pd.concat(result)
@@ -50,7 +51,7 @@ class trips_input:
             d.PULocationID = d.PULocationID.astype('uint16'  )
             d.DOLocationID = d.DOLocationID.astype('uint16')
             monetary = 'fare_amount tip_amount total_amount tolls_amount extra mta_tax'.split( )
-            d[monetary]= abs(d[monetary].apply(lambda x: (x*100).astype('uint16')))
+            d[monetary]= abs(d[monetary].apply(lambda x: x.astype('float32')))
             d.improvement_surcharge = d.improvement_surcharge.astype('float32')
             d.congestion_surcharge = d.congestion_surcharge.astype('float32')
             d.trip_distance = d.trip_distance.astype('float32')
@@ -71,7 +72,7 @@ class trips_input:
         f = '01 02 03 04 05 06 07 08 09 10 11 12'.split()
         result = []
         for i in f:
-            raw = pd.read_parquet(os.path.join(self.get_data_path(), '..', 'trip_data', f"{i}.parquet"),engine='pyarrow')
+            raw = pd.read_parquet(os.path.join(self.get_data_path(), 'input', f"{i}.parquet"),engine='pyarrow')
             df = raw[raw.PULocationID.isin(qb)==True]
             result.append(df)
         full_queens = pd.concat(result)

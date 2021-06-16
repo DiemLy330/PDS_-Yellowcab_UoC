@@ -8,6 +8,7 @@ import seaborn as sns
 from scipy.stats import norm
 from yellowcab.model import *
 import sklearn
+from yellowcab.io import input
 
 def main():
         # Test geo() module,
@@ -366,24 +367,24 @@ def main():
     # plt.clf()
 #-----------------------------------------------------------
     # Test model
-    y = model_nyc()
+    # y = model_nyc()
     # df = y.transform()
     # df = y.predict_distance_nyc()
     # df = y.predict_fare_nyc()
     # df = y.predict_payment_type_nyc()
-    df = y.predict()
-    # x = model_queens()
+    # df = y.predict()
+    x = model_queens()
     # df = x.predict_distance_queens()
     # df = x.predict_fare_queens()
     # df = x.predict_payment_type_queens()
-    # print(sklearn.__version__)
-    # print(df.describe())
+    df = x.predict()
+    print(df)
     # print(df.info())
-    # print(df[['trip_distance','fare_amount','payment_type','duration']].describe())
-    # print(df.shape, df.min(), df.max())
-    # df = y.predict()
-    print(df.info())
-    print(df.head())
+    # print(df.head())
+
+    # a = pd.read_parquet(r'C:\Users\kyral\Documents\GitHub\PDS_Yellowcab_UoC\data\input\04.parquet',engine='pyarrow')
+    # x = input.read_model(name='predict_payment_type_queens.pkl')
+    # print(x)
 
 if __name__ == '__main__':
     main()
